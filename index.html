@@ -55,9 +55,10 @@ let supabase
 
 // 🔥 esperar a que cargue la librería
 window.addEventListener("load", () => {
-  supabase = window.supabase.createClient(
-    "https://TU_URL.supabase.co",
-    "TU_ANON_KEY"
+  // CORRECCIÓN: Se usa 'supabase.createClient' directamente con la v2 del CDN
+  supabase = supabase.createClient(
+    "https://dlfgyjpsoslnorwqcfga.supabase.co",
+    "sb_publishable_6RYWbnctNBOF3qXv7p9wLw_mVFrZmsY"
   )
 
   cargar()
@@ -75,16 +76,28 @@ async function guardar() {
 
   if (error) {
     alert(error.message)
+  } else {
+    // Limpia los campos después de guardar
+    document.getElementById("producto").value = ""
+    document.getElementById("costo").value = ""
+    document.getElementById("precio").value = ""
+    cargar()
   }
-
-  cargar()
 }
 
 async function cargar() {
-  const { data } = await supabase.from("ventas").select("*")
+  const { data, error } = await supabase.from("ventas").select("*")
 
-  document.getElementById("lista").innerHTML =
-    data.map(v => `<p>${v.producto} → 💸 ${v.ganancia}</p>`).join("")
+  if (error) {
+    console.error(error)
+    return
+  }
+
+  // CORRECCIÓN: Validamos que 'data' exista antes de usar .map
+  if (data) {
+    document.getElementById("lista").innerHTML =
+      data.map(v => `<p>${v.producto} → 💸 ${v.ganancia}</p>`).join("")
+  }
 }
 </script>
 
