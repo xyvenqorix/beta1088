@@ -27,12 +27,19 @@ input, button {
   width: 100%;
   padding: 10px;
   margin: 5px 0;
+  box-sizing: border-box;
 }
 
 button {
   background: #00ffcc;
   font-weight: bold;
   border: none;
+  cursor: pointer;
+}
+
+#status {
+  margin-top: 10px;
+  font-weight: bold;
 }
 </style>
 </head>
@@ -46,41 +53,51 @@ button {
   <input id="costo" type="number" placeholder="Costo">
   <input id="precio" type="number" placeholder="Precio">
   <button onclick="guardar()">Guardar</button>
-</div>
+  <div id="status"></div> </div>
 
 <div id="lista"></div>
 
 <script>
 let supabase
 
-// 🔥 esperar a que cargue la librería
 window.addEventListener("load", () => {
-  // CORRECCIÓN: Se usa 'supabase.createClient' directamente con la v2 del CDN
-  supabase = supabase.createClient(
-    "https://dlfgyjpsoslnorwqcfga.supabase.co",
-    "sb_publishable_6RYWbnctNBOF3qXv7p9wLw_mVFrZmsY"
-  )
+  // Aquí Vercel inyectará tus datos desde el .env
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
+  supabase = window.supabase.createClient(url, key)
   cargar()
 })
 
 async function guardar() {
-  const producto = document.getElementById("producto").value
-  const costo = Number(document.getElementById("costo").value)
-  const precio = Number(document.getElementById("precio").value)
-  const ganancia = precio - costo
+  const p = document.getElementById("producto")
+  const c = document.getElementById("costo")
+  const pr = document.getElementById("precio")
+  const status = document.getElementById("status")
+
+  // Validar que no esté vacío
+  if (!p.value || !c.value || !pr.value) {
+    status.style.color = "red"
+    status.innerText = "Error: Faltan datos"
+    return
+  }
+
+  const ganancia = Number(pr.value) - Number(c.value)
 
   const { error } = await supabase.from("ventas").insert([
-    { producto, costo, precio, ganancia }
+    { producto: p.value, costo: Number(c.value), precio: Number(pr.value), ganancia }
   ])
 
   if (error) {
-    alert(error.message)
+    status.style.color = "red"
+    status.innerText = "Error al enviar"
+    console.error(error)
   } else {
-    // Limpia los campos después de guardar
-    document.getElementById("producto").value = ""
-    document.getElementById("costo").value = ""
-    document.getElementById("precio").value = ""
+    status.style.color = "#00ffcc"
+    status.innerText = "Enviado correctamente"
+    
+    // Limpiar para la siguiente
+    p.value = ""; c.value = ""; pr.value = ""
     cargar()
   }
 }
@@ -88,12 +105,8 @@ async function guardar() {
 async function cargar() {
   const { data, error } = await supabase.from("ventas").select("*")
 
-  if (error) {
-    console.error(error)
-    return
-  }
+  if (error) return
 
-  // CORRECCIÓN: Validamos que 'data' exista antes de usar .map
   if (data) {
     document.getElementById("lista").innerHTML =
       data.map(v => `<p>${v.producto} → 💸 ${v.ganancia}</p>`).join("")
