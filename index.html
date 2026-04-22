@@ -9,16 +9,16 @@
 <style>
 body {
   font-family: Arial;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #1e1e2f;
   color: white;
   text-align: center;
   padding: 20px;
 }
 
 .box {
-  background: rgba(255,255,255,0.1);
+  background: #ffffff10;
   padding: 20px;
-  border-radius: 15px;
+  border-radius: 12px;
   max-width: 400px;
   margin: auto;
 }
@@ -27,13 +27,12 @@ input, button {
   width: 100%;
   padding: 10px;
   margin: 5px 0;
-  border-radius: 10px;
-  border: none;
 }
 
 button {
   background: #00ffcc;
   font-weight: bold;
+  border: none;
 }
 </style>
 </head>
@@ -46,42 +45,47 @@ button {
   <input id="producto" placeholder="Producto">
   <input id="costo" type="number" placeholder="Costo">
   <input id="precio" type="number" placeholder="Precio">
-
   <button onclick="guardar()">Guardar</button>
 </div>
 
 <div id="lista"></div>
 
 <script>
-const supabase = window.supabase.createClient(
-  window.SUPABASE_URL,
-  window.SUPABASE_KEY
-)
+let supabase
+
+// 🔥 esperar a que cargue la librería
+window.addEventListener("load", () => {
+  supabase = window.supabase.createClient(
+    "https://TU_URL.supabase.co",
+    "TU_ANON_KEY"
+  )
+
+  cargar()
+})
 
 async function guardar() {
   const producto = document.getElementById("producto").value
-  const costo = +document.getElementById("costo").value
-  const precio = +document.getElementById("precio").value
+  const costo = Number(document.getElementById("costo").value)
+  const precio = Number(document.getElementById("precio").value)
   const ganancia = precio - costo
 
-  await supabase.from("ventas").insert([
+  const { error } = await supabase.from("ventas").insert([
     { producto, costo, precio, ganancia }
   ])
+
+  if (error) {
+    alert(error.message)
+  }
 
   cargar()
 }
 
 async function cargar() {
-  const { data } = await supabase
-    .from("ventas")
-    .select("*")
-    .order("created_at", { ascending: false })
+  const { data } = await supabase.from("ventas").select("*")
 
   document.getElementById("lista").innerHTML =
     data.map(v => `<p>${v.producto} → 💸 ${v.ganancia}</p>`).join("")
 }
-
-cargar()
 </script>
 
 </body>
