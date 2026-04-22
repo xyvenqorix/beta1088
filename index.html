@@ -35,11 +35,14 @@ button {
   font-weight: bold;
   border: none;
   cursor: pointer;
+  color: #1e1e2f;
 }
 
+/* Estilo para los mensajes */
 #status {
   margin-top: 10px;
-  font-weight: bold;
+  font-size: 14px;
+  min-height: 20px;
 }
 </style>
 </head>
@@ -53,7 +56,8 @@ button {
   <input id="costo" type="number" placeholder="Costo">
   <input id="precio" type="number" placeholder="Precio">
   <button onclick="guardar()">Guardar</button>
-  <div id="status"></div> </div>
+  <div id="status"></div>
+</div>
 
 <div id="lista"></div>
 
@@ -61,12 +65,16 @@ button {
 let supabase
 
 window.addEventListener("load", () => {
-  // Aquí Vercel inyectará tus datos desde el .env
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  // Vercel inyectará esto. Para pruebas locales, asegúrate de tener los valores.
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-  supabase = window.supabase.createClient(url, key)
-  cargar()
+  if (url && key) {
+    supabase = window.supabase.createClient(url, key);
+    cargar();
+  } else {
+    document.getElementById("status").innerText = "⚠️ Error: Faltan credenciales";
+  }
 })
 
 async function guardar() {
@@ -75,34 +83,44 @@ async function guardar() {
   const pr = document.getElementById("precio")
   const status = document.getElementById("status")
 
-  // Validar que no esté vacío
-  if (!p.value || !c.value || !pr.value) {
-    status.style.color = "red"
-    status.innerText = "Error: Faltan datos"
+  // 1. VALIDACIÓN: Si no hay nada escrito
+  if (!p.value.trim() || !c.value || !pr.value) {
+    status.style.color = "#ff4d4d" // Rojo
+    status.innerText = "❌ Rellene los campos"
     return
   }
 
+  status.style.color = "white"
+  status.innerText = "⏳ Enviando..."
+
   const ganancia = Number(pr.value) - Number(c.value)
 
-  const { error } = await supabase.from("ventas").insert([
-    { producto: p.value, costo: Number(c.value), precio: Number(pr.value), ganancia }
-  ])
+  try {
+    const { error } = await supabase.from("ventas").insert([
+      { producto: p.value, costo: Number(c.value), precio: Number(pr.value), ganancia }
+    ])
 
-  if (error) {
-    status.style.color = "red"
-    status.innerText = "Error al enviar"
-    console.error(error)
-  } else {
-    status.style.color = "#00ffcc"
-    status.innerText = "Enviado correctamente"
-    
-    // Limpiar para la siguiente
-    p.value = ""; c.value = ""; pr.value = ""
-    cargar()
+    if (error) {
+      status.style.color = "#ff4d4d"
+      status.innerText = "❌ Error al enviar"
+      console.error(error)
+    } else {
+      // 2. ÉXITO: Mensaje de enviado
+      status.style.color = "#00ffcc" // Tu verde cian
+      status.innerText = "✅ Enviado"
+      
+      // Limpiar campos
+      p.value = ""; c.value = ""; pr.value = ""
+      cargar()
+    }
+  } catch (err) {
+    status.style.color = "#ff4d4d"
+    status.innerText = "❌ Error de conexión"
   }
 }
 
 async function cargar() {
+  if (!supabase) return
   const { data, error } = await supabase.from("ventas").select("*")
 
   if (error) return
