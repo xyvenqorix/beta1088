@@ -3,134 +3,110 @@
 <head>
 <meta charset="UTF-8">
 <title>Ventas</title>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
-body {
-  font-family: Arial;
-  background: #1e1e2f;
-  color: white;
-  text-align: center;
-  padding: 20px;
-}
-
-.box {
-  background: #ffffff10;
-  padding: 20px;
-  border-radius: 12px;
-  max-width: 400px;
-  margin: auto;
-}
-
-input, button {
-  width: 100%;
-  padding: 10px;
-  margin: 5px 0;
-  box-sizing: border-box;
-}
-
-button {
-  background: #00ffcc;
-  font-weight: bold;
-  border: none;
-  cursor: pointer;
-  color: #1e1e2f;
-}
-
-/* Estilo para los mensajes */
-#status {
-  margin-top: 10px;
-  font-size: 14px;
-  min-height: 20px;
-}
+  body { font-family: Arial; background: #1e1e2f; color: white; text-align: center; padding: 20px; }
+  .box { background: #ffffff10; padding: 20px; border-radius: 12px; max-width: 400px; margin: auto; }
+  input, button { width: 100%; padding: 12px; margin: 8px 0; box-sizing: border-box; border-radius: 8px; border: none; }
+  button { background: #00ffcc; font-weight: bold; cursor: pointer; color: #1e1e2f; }
+  #status { margin-top: 10px; font-weight: bold; min-height: 1.2em; }
 </style>
 </head>
-
 <body>
 
 <h1>💰 Ventas</h1>
-
 <div class="box">
   <input id="producto" placeholder="Producto">
   <input id="costo" type="number" placeholder="Costo">
   <input id="precio" type="number" placeholder="Precio">
-  <button onclick="guardar()">Guardar</button>
+  <button id="btn" onclick="guardar()">Guardar</button>
   <div id="status"></div>
 </div>
-
 <div id="lista"></div>
 
 <script>
-let supabase
+let supabase;
+
+// 1. Detectar si las variables existen antes de empezar
+const URL = "https://dlfgyjpsoslnorwqcfga.supabase.co"; // Tu URL real
+const KEY = "sb_publishable_6RYWbnctNBOF3qXv7p9wLw_mVFrZmsY"; // Tu Key real
 
 window.addEventListener("load", () => {
-  // Vercel inyectará esto. Para pruebas locales, asegúrate de tener los valores.
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-  if (url && key) {
-    supabase = window.supabase.createClient(url, key);
+  try {
+    // Inicialización con el objeto global de la v2
+    supabase = window.supabase.createClient(URL, KEY);
+    console.log("Supabase listo");
     cargar();
-  } else {
-    document.getElementById("status").innerText = "⚠️ Error: Faltan credenciales";
+  } catch (e) {
+    alert("Error al iniciar Supabase: " + e.message);
   }
-})
+});
 
 async function guardar() {
-  const p = document.getElementById("producto")
-  const c = document.getElementById("costo")
-  const pr = document.getElementById("precio")
-  const status = document.getElementById("status")
+  const p = document.getElementById("producto");
+  const c = document.getElementById("costo");
+  const pr = document.getElementById("precio");
+  const status = document.getElementById("status");
+  const btn = document.getElementById("btn");
 
-  // 1. VALIDACIÓN: Si no hay nada escrito
+  // Validación: Si están vacíos, avisar y frenar
   if (!p.value.trim() || !c.value || !pr.value) {
-    status.style.color = "#ff4d4d" // Rojo
-    status.innerText = "❌ Rellene los campos"
-    return
+    status.style.color = "#ff4d4d";
+    status.innerText = "❌ Rellene los campos";
+    alert("Por favor, rellena todos los campos antes de guardar.");
+    return;
   }
 
-  status.style.color = "white"
-  status.innerText = "⏳ Enviando..."
+  btn.disabled = true;
+  status.style.color = "white";
+  status.innerText = "⏳ Enviando...";
 
-  const ganancia = Number(pr.value) - Number(c.value)
+  const ganancia = Number(pr.value) - Number(c.value);
 
   try {
     const { error } = await supabase.from("ventas").insert([
-      { producto: p.value, costo: Number(c.value), precio: Number(pr.value), ganancia }
-    ])
+      { 
+        producto: p.value.trim(), 
+        costo: Number(c.value), 
+        precio: Number(pr.value), 
+        ganancia: ganancia 
+      }
+    ]);
 
     if (error) {
-      status.style.color = "#ff4d4d"
-      status.innerText = "❌ Error al enviar"
-      console.error(error)
+      status.style.color = "#ff4d4d";
+      status.innerText = "❌ Error al enviar";
+      alert("Error de Supabase: " + error.message);
     } else {
-      // 2. ÉXITO: Mensaje de enviado
-      status.style.color = "#00ffcc" // Tu verde cian
-      status.innerText = "✅ Enviado"
-      
+      status.style.color = "#00ffcc";
+      status.innerText = "✅ Enviado";
       // Limpiar campos
-      p.value = ""; c.value = ""; pr.value = ""
-      cargar()
+      p.value = ""; c.value = ""; pr.value = "";
+      cargar();
     }
   } catch (err) {
-    status.style.color = "#ff4d4d"
-    status.innerText = "❌ Error de conexión"
+    alert("Fallo crítico: " + err.message);
+  } finally {
+    btn.disabled = false;
   }
 }
 
 async function cargar() {
-  if (!supabase) return
-  const { data, error } = await supabase.from("ventas").select("*")
-
-  if (error) return
-
-  if (data) {
-    document.getElementById("lista").innerHTML =
-      data.map(v => `<p>${v.producto} → 💸 ${v.ganancia}</p>`).join("")
+  try {
+    const { data, error } = await supabase.from("ventas").select("*").order('id', { ascending: false });
+    if (error) throw error;
+    
+    if (data) {
+      document.getElementById("lista").innerHTML = data
+        .map(v => `<p style="border-bottom: 1px solid #333; padding: 5px;">
+                    ${v.producto} → <span style="color:#00ffcc">💸 ${v.ganancia}</span>
+                   </p>`)
+        .join("");
+    }
+  } catch (e) {
+    console.error("Error cargando lista:", e.message);
   }
 }
 </script>
-
 </body>
 </html>
